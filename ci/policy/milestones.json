@@ -4,10 +4,13 @@
     "release_edit_p99_ms": 1.0,
     "release_frame_p99_ms": 16.0,
     "release_cold_edit_p99_ms": 100.0,
+    "release_multi_cursor_count": 32,
+    "release_multi_cursor_edit_p99_ms": 1.0,
     "release_peak_rss_bytes": 100000000,
     "release_document_bytes": 10000000000,
     "release_undo_transactions": 1000000,
     "release_adversarial_operations": 10000000,
+    "release_instruction_regression_percent": 5.0,
     "statistical_regression_percent": 5.0
   },
   "milestones": [

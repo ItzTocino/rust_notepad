@@ -1,4 +1,5 @@
 /target/
 /ci/evidence/
 /ci/tmp/
+/ci/scripts/__pycache__/
 *.profraw

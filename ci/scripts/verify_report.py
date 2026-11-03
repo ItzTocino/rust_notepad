@@ -59,19 +59,24 @@ def verify(report_path):
         errors.append("PASS requires samples")
     if report.get("lane") == "performance" and report.get("status") == "PASS":
         metrics = report.get("metrics", {})
-        if report.get("sample_count", 0) < 300_000 or metrics.get("independent_runs") != 3 or metrics.get("run_sample_counts") != [100_000, 100_000, 100_000]:
+        run_counts = metrics.get("run_sample_counts")
+        if (report.get("sample_count", 0) < 300_000 or metrics.get("independent_runs") != 3
+                or not isinstance(run_counts, list) or len(run_counts) != 3
+                or any(type(n) is not int or n < 100_000 for n in run_counts)):
             errors.append("performance PASS requires three independent runs with at least 100,000 samples each")
-        numeric_limits = {"hot_edit_p99_ms": 1.0, "hot_edit_upper_95_p99_ms": 1.0, "frame_p99_ms": 16.0,
-                          "frame_upper_95_p99_ms": 16.0, "cold_edit_p99_ms": 100.0,
-                          "cold_edit_upper_95_p99_ms": 100.0, "peak_rss_bytes": 100_000_000,
-                          "instruction_count_regression_percent": 5.0}
-        for key, limit in numeric_limits.items():
+        numeric_limits = {"hot_edit_p99_ms": (1.0, True), "hot_edit_upper_95_p99_ms": (1.0, True),
+                          "multi_cursor_edit_p99_ms": (1.0, True), "multi_cursor_edit_upper_95_p99_ms": (1.0, True),
+                          "frame_p99_ms": (16.0, False), "frame_upper_95_p99_ms": (16.0, False),
+                          "cold_edit_p99_ms": (100.0, False), "cold_edit_upper_95_p99_ms": (100.0, False),
+                          "peak_rss_bytes": (100_000_000, True), "instruction_count_regression_percent": (5.0, False)}
+        for key, (limit, strict) in numeric_limits.items():
             value = metrics.get(key)
-            if not isinstance(value, (int, float)) or isinstance(value, bool) or value > limit:
+            if not isinstance(value, (int, float)) or isinstance(value, bool) or value > limit or (strict and value == limit):
                 errors.append(f"performance metric {key} missing or over limit {limit}")
-        required_metrics = tuple(numeric_limits) + ("p50_ms", "p95_ms", "independent_runs", "run_sample_counts",
+        required_metrics = tuple(numeric_limits) + ("p50_ms", "p95_ms", "independent_runs", "run_sample_counts", "multi_cursor_count",
                                                     "cpu_calibrated", "power_calibrated", "affinity_verified",
-                                                    "matching_hardware_os_fixture_compiler", "ui_thread_sync_io")
+                                                    "matching_hardware_os_fixture_compiler", "ui_thread_sync_io",
+                                                    "confidence_method", "raw_samples_sha256")
         if not all(key in metrics for key in required_metrics):
             errors.append("performance PASS is missing required calibrated metrics")
         for key in ("cpu_calibrated", "power_calibrated", "affinity_verified", "matching_hardware_os_fixture_compiler"):
@@ -79,6 +84,39 @@ def verify(report_path):
                 errors.append(f"performance calibration failed: {key}")
         if metrics.get("ui_thread_sync_io") is not False:
             errors.append("UI-thread synchronous I/O detected or unknown")
+        if metrics.get("multi_cursor_count") != 32:
+            errors.append("performance qualification must include exactly 32 cursors")
+        if metrics.get("confidence_method") != "one_sided_95_percent":
+            errors.append("performance confidence method must be one-sided 95 percent")
+        if not re.fullmatch(r"[0-9a-f]{64}", str(metrics.get("raw_samples_sha256", ""))):
+            errors.append("performance report is missing the raw sample artifact hash")
+        if not artifact.is_file() or metrics.get("raw_samples_sha256") != sha256(artifact):
+            errors.append("raw sample artifact hash does not match retained artifact")
+        for observed_key, upper_key in (("hot_edit_p99_ms", "hot_edit_upper_95_p99_ms"),
+                                        ("multi_cursor_edit_p99_ms", "multi_cursor_edit_upper_95_p99_ms"),
+                                        ("frame_p99_ms", "frame_upper_95_p99_ms"),
+                                        ("cold_edit_p99_ms", "cold_edit_upper_95_p99_ms")):
+            observed, upper = metrics.get(observed_key), metrics.get(upper_key)
+            if isinstance(observed, (int, float)) and isinstance(upper, (int, float)) and upper < observed:
+                errors.append(f"confidence bound {upper_key} is below observed p99 {observed_key}")
+    if report.get("lane") == "release" and report.get("status") == "PASS":
+        metrics = report.get("metrics", {})
+        required_release = {"fixture_bytes": 10_000_000_000, "undo_redo_transactions": 1_000_000,
+                            "adversarial_operations": 10_000_000, "peak_rss_bytes": 100_000_000,
+                            "crash_recovery_verified": True, "byte_exact_10gb_fixture": True,
+                            "provenance_verified": True}
+        for key, minimum in required_release.items():
+            value = metrics.get(key)
+            if isinstance(minimum, bool):
+                valid = value is minimum
+            elif key == "fixture_bytes":
+                valid = type(value) is int and value == minimum
+            elif key == "peak_rss_bytes":
+                valid = type(value) is int and value < minimum
+            else:
+                valid = type(value) is int and value >= minimum
+            if not valid:
+                errors.append(f"release qualification missing or failing {key}")
     expected = json.loads(REQUIRED.read_text(encoding="utf-8"))["checks"]
     if report.get("lane") == "correctness":
         checks = report.get("metrics", {}).get("checks", [])
