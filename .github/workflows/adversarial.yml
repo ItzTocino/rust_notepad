@@ -1,0 +1,33 @@
+name: Adversarial checks
+on:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: adversarial-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  detector-fixtures:
+    runs-on: [self-hosted, windows, x64, ephemeral]
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Install pinned Rust toolchain
+        run: rustup toolchain install 1.85.1 --profile minimal
+      - name: Verifier detector suite
+        run: python ci/scripts/test_verifier.py
+      - name: Create and independently verify evidence
+        if: success()
+        run: |
+          python ci/scripts/emit_status.py --lane adversarial --status PASS --reason "Synthetic evidence detector corpus passed"
+          python ci/scripts/verify_report.py ci/evidence/adversarial.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: adversarial-evidence-${{ github.sha }}
+          path: ci/evidence/
+          if-no-files-found: ignore
+          retention-days: 14

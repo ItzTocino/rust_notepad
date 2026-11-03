@@ -1,0 +1,35 @@
+name: Performance qualification
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 5 * * 1'
+permissions:
+  contents: read
+concurrency:
+  group: performance-exclusive
+  cancel-in-progress: false
+jobs:
+  performance:
+    # Operator must provision an exclusive calibrated Windows host with this
+    # label; do not run correctness or other jobs concurrently on this host.
+    runs-on: [self-hosted, windows, x64, perf-exclusive]
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Install pinned Rust toolchain
+        run: rustup toolchain install 1.85.1 --profile minimal
+      - name: Build timed target outside sample interval
+        run: cargo build --locked --release
+      - name: Record baseline qualification status
+        run: |
+          python ci/scripts/emit_status.py --lane performance --status NOT_APPLICABLE --reason "No editor operations or calibrated harness implemented at milestone 1"
+          python ci/scripts/verify_report.py ci/evidence/performance.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: performance-evidence-${{ github.sha }}
+          path: ci/evidence/
+          if-no-files-found: ignore
+          retention-days: 30

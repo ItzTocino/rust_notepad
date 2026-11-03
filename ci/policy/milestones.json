@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "gates": {
+    "release_edit_p99_ms": 1.0,
+    "release_frame_p99_ms": 16.0,
+    "release_cold_edit_p99_ms": 100.0,
+    "release_peak_rss_bytes": 100000000,
+    "release_document_bytes": 10000000000,
+    "release_undo_transactions": 1000000,
+    "release_adversarial_operations": 10000000,
+    "statistical_regression_percent": 5.0
+  },
+  "milestones": [
+    {"id": 1, "name": "runnable app", "status": "IMPLEMENTED"},
+    {"id": 2, "name": "open/save", "status": "NOT_APPLICABLE"},
+    {"id": 3, "name": "correct engine", "status": "NOT_APPLICABLE"},
+    {"id": 4, "name": "piece storage", "status": "NOT_APPLICABLE"},
+    {"id": 5, "name": "Unicode", "status": "NOT_APPLICABLE"},
+    {"id": 6, "name": "multi-cursor", "status": "NOT_APPLICABLE"},
+    {"id": 7, "name": "undo/redo", "status": "NOT_APPLICABLE"},
+    {"id": 8, "name": "persistent journal", "status": "NOT_APPLICABLE"},
+    {"id": 9, "name": "10GB documents", "status": "NOT_APPLICABLE"},
+    {"id": 10, "name": "RAM bound", "status": "NOT_APPLICABLE"},
+    {"id": 11, "name": "sub-ms edits", "status": "NOT_APPLICABLE"},
+    {"id": 12, "name": "16ms frames", "status": "NOT_APPLICABLE"},
+    {"id": 13, "name": "cold-cache edits", "status": "NOT_APPLICABLE"},
+    {"id": 14, "name": "10M adversarial operations", "status": "NOT_APPLICABLE"},
+    {"id": 15, "name": "release", "status": "NOT_APPLICABLE"}
+  ]
+}

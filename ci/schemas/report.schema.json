@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["schema_version", "lane", "status", "commit", "fixture_sha256", "policy_sha256", "runner", "toolchain", "sample_count", "artifact_sha256", "reason"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "lane": {"enum": ["correctness", "adversarial", "performance", "release"]},
+    "status": {"enum": ["PASS", "FAIL", "INCONCLUSIVE", "NOT_APPLICABLE"]},
+    "commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "fixture_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "policy_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "artifact_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "runner": {"type": "string", "minLength": 1},
+    "toolchain": {"type": "string", "minLength": 1},
+    "sample_count": {"type": "integer", "minimum": 0},
+    "reason": {"type": "string", "minLength": 1},
+    "metrics": {"type": "object"}
+  },
+  "additionalProperties": false
+}
